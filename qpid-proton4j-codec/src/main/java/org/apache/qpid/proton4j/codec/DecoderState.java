@@ -17,11 +17,18 @@
 package org.apache.qpid.proton4j.codec;
 
 import org.apache.qpid.proton4j.buffer.ProtonBuffer;
+import org.apache.qpid.proton4j.buffer.ProtonBufferAllocator;
 
 /**
  * Retains state of decode either between calls or across decode iterations
  */
 public interface DecoderState {
+
+    /** This can be used to change temporary allocators */
+    ProtonBufferAllocator allocator();
+
+    /** This can be used to change temporary allocators */
+    DecoderState allocator(ProtonBufferAllocator allocator);
 
     /**
      * Resets any intermediate state back to default values.

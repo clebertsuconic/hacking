@@ -72,7 +72,7 @@ public class AmqpFrameParser implements FrameParser {
 
     private SaslHandler sasl;
     private ProtonBuffer buffer;
-    private int frameSizeLimit;
+    private int frameSizeLimit = Integer.MAX_VALUE;
     private Decoder decoder;
     private DecoderState decoderState;
 
@@ -96,7 +96,7 @@ public class AmqpFrameParser implements FrameParser {
         State parsingState = this.state;
         ProtonBuffer input = incoming;
 
-        while (input.isReadable() && parsingState != State.ERROR && !sasl.isDone()) {
+        while (input.isReadable() && parsingState != State.ERROR && (sasl == null || !sasl.isDone())) {
             switch (parsingState) {
                 case HEADER0:
                     if (incoming.isReadable()) {
@@ -318,6 +318,7 @@ public class AmqpFrameParser implements FrameParser {
                         }
 
                         if (val instanceof Performative) {
+                            // refactor this out
                             Performative frameBody = (Performative) val;
                             LOG.trace("IN: {} CH[{}] : {} [{}]", channel, frameBody, payload);
                             context.fireProtocolFrame(new ProtocolFrame(frameBody, channel, payload));

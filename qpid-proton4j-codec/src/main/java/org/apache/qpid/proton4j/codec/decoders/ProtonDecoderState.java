@@ -21,6 +21,8 @@ import java.nio.charset.CharsetDecoder;
 import java.nio.charset.StandardCharsets;
 
 import org.apache.qpid.proton4j.buffer.ProtonBuffer;
+import org.apache.qpid.proton4j.buffer.ProtonBufferAllocator;
+import org.apache.qpid.proton4j.buffer.ProtonByteBufferAllocator;
 import org.apache.qpid.proton4j.codec.DecoderState;
 
 /**
@@ -32,6 +34,8 @@ public class ProtonDecoderState implements DecoderState {
 
     private final ProtonDecoder decoder;
 
+    private ProtonBufferAllocator allocator = ProtonByteBufferAllocator.DEFAULT;
+
     private UTF8Decoder stringDecoder;
 
     public ProtonDecoderState(ProtonDecoder decoder) {
@@ -41,6 +45,17 @@ public class ProtonDecoderState implements DecoderState {
     @Override
     public ProtonDecoder getDecoder() {
         return decoder;
+    }
+
+    @Override
+    public ProtonBufferAllocator allocator() {
+        return allocator;
+    }
+
+    @Override
+    public ProtonDecoderState allocator(ProtonBufferAllocator allocator) {
+        this.allocator = allocator;
+        return this;
     }
 
     @Override

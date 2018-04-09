@@ -38,7 +38,7 @@ public abstract class AbstractSymbolTypeDecoder extends AbstractPrimitiveTypeDec
         //        a view of the buffer without copying it and then just skipping the bytes
         //        would be faster since we should eventually not be creating a new symbol
         //        from the bytes since we cache them internally in Symbol.
-        ProtonBuffer symbolBuffer = ProtonByteBufferAllocator.DEFAULT.allocate(length, length);
+        ProtonBuffer symbolBuffer = state.allocator().allocate(length, length);
         buffer.readBytes(symbolBuffer, length);
 
         return Symbol.getSymbol(symbolBuffer);
@@ -52,7 +52,7 @@ public abstract class AbstractSymbolTypeDecoder extends AbstractPrimitiveTypeDec
         //        a view of the buffer without copying it and then just skipping the bytes
         //        would be faster since we should eventually not be creating a new symbol
         //        from the bytes since we cache them internally in Symbol.
-        ProtonBuffer symbolBuffer = ProtonByteBufferAllocator.DEFAULT.allocate(length, length);
+        ProtonBuffer symbolBuffer = state.allocator().allocate(length, length);
         buffer.readBytes(symbolBuffer, length);
 
         return Symbol.getSymbol(symbolBuffer).toString();

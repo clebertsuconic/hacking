@@ -23,27 +23,76 @@
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>qpid-proton4j-engine</artifactId>
+  <artifactId>qpid-proton4j-netty</artifactId>
   <packaging>bundle</packaging>
 
-  <name>Qpid Proton4J Engine</name>
+  <name>Qpid Proton4J Netty Interceptor</name>
+
+  <properties>
+    <netty.version>4.1.22.Final</netty.version>
+    <fastutil.version>8.1.0</fastutil.version>
+    <qpid.jms.version>0.31.0</qpid.jms.version>
+  </properties>
 
   <dependencies>
-    <dependency>
+   <dependency>
       <groupId>org.apache.qpid</groupId>
       <artifactId>qpid-proton4j-transport</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.apache.qpid</groupId>
-      <artifactId>qpid-proton4j-engine</artifactId>
+
+     <dependency>
+        <groupId>org.apache.qpid</groupId>
+        <artifactId>qpid-proton4j-engine</artifactId>
+     </dependency>
+     <dependency>
+        <groupId>it.unimi.dsi</groupId>
+        <artifactId>fastutil</artifactId>
+        <version>${fastutil.version}</version>
+     </dependency>
+
+
+     <dependency>
+        <groupId>org.apache.qpid</groupId>
+        <artifactId>qpid-jms-client</artifactId>
+        <version>${qpid.jms.version}</version>
+        <scope>test</scope>
+     </dependency>
+
+     <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-buffer</artifactId>
+      <version>${netty.version}</version>
+      <!-- License: Apache 2.0 -->
     </dependency>
     <dependency>
-      <groupId>org.apache.qpid</groupId>
-      <artifactId>qpid-proton4j-buffer</artifactId>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport</artifactId>
+      <version>${netty.version}</version>
+      <!-- License: Apache 2.0 -->
     </dependency>
     <dependency>
-      <groupId>org.apache.qpid</groupId>
-      <artifactId>qpid-proton4j-codec</artifactId>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-handler</artifactId>
+      <version>${netty.version}</version>
+      <!-- License: Apache 2.0 -->
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec</artifactId>
+      <version>${netty.version}</version>
+      <!-- License: Apache 2.0 -->
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-common</artifactId>
+      <version>${netty.version}</version>
+      <!-- License: Apache 2.0 -->
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec-http</artifactId>
+      <version>${netty.version}</version>
+      <!-- License: Apache 2.0 -->
     </dependency>
     <dependency>
       <groupId>junit</groupId>
@@ -55,8 +104,8 @@
       <artifactId>mockito-core</artifactId>
       <scope>test</scope>
     </dependency>
-  </dependencies>
 
+  </dependencies>
   <build>
     <plugins>
       <plugin>
