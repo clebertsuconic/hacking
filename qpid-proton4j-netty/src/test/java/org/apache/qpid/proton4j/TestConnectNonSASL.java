@@ -18,6 +18,8 @@
 package org.apache.qpid.proton4j;
 
 import javax.jms.Connection;
+import javax.jms.MessageProducer;
+import javax.jms.Queue;
 import javax.jms.Session;
 
 import org.apache.qpid.jms.JmsConnectionFactory;
@@ -48,6 +50,8 @@ public class TestConnectNonSASL {
 
       Connection connection = factory.createConnection();
       Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+      Queue queue = session.createQueue("test");
+      //MessageProducer producer = session.createProducer(queue);
       session.close();
       connection.close();
 

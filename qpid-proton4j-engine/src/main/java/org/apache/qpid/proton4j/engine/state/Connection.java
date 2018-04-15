@@ -249,16 +249,11 @@ public class Connection extends EndpointImpl {
 
    void localOpen()
    {
-      if (processor != null) {
-         processor.sendOpen(this);
-      }
    }
 
    void localClose()
    {
-      if (processor != null) {
-         processor.sendClose(this);
-      }
+
    }
 
    @Override

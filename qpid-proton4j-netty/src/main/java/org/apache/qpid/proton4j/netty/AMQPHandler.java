@@ -28,6 +28,7 @@ import it.unimi.dsi.fastutil.shorts.Short2ObjectMap;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 import org.apache.qpid.proton4j.amqp.transport.Begin;
 import org.apache.qpid.proton4j.amqp.transport.Close;
+import org.apache.qpid.proton4j.amqp.transport.End;
 import org.apache.qpid.proton4j.amqp.transport.Open;
 import org.apache.qpid.proton4j.amqp.transport.Performative;
 import org.apache.qpid.proton4j.buffer.ProtonBuffer;
@@ -124,6 +125,9 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
          case BEGIN:
             handleBegin((Begin) currentPerformative, currentPayload, currentChannel);
             break;
+         case END:
+            handleEnd((End) currentPerformative, currentPayload, currentChannel);
+            break;
          default:
             System.out.println("Normative " + currentPerformative + " not implemented yet");
             ctx.channel().writeAndFlush(nettyBuffer);
@@ -170,7 +174,7 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
       }
       connection = createConnection();
       connection.handleOpen(open);
-      connectionOpened(open);
+      connectionOpened(open, connection);
    }
 
    public void handleClose(Close close, byte[] payload, short channel)
@@ -179,9 +183,8 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
          sendError("Connection previously open");
          return;
       }
-      connection = createConnection();
       connection.handleClose(close);
-      connectionClosed(close);
+      connectionClosed(close, connection);
    }
 
    public void handleBegin(Begin begin, byte[] payload, short channel)
@@ -213,26 +216,47 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
       session.setChannel(channel);
       session.setRemoteState(EndpointState.ACTIVE);
       session.setRemoteProperties(begin.getProperties());
+      session.setOutgoingWindow(begin.getOutgoingWindow().intValue());
+      session.setIncomingWindow(begin.getIncomingWindow().intValue());
       session.setRemoteDesiredCapabilities(begin.getDesiredCapabilities());
       session.setRemoteOfferedCapabilities(begin.getOfferedCapabilities());
-      sessionOpened(begin, session);
+      sessionBegin(begin, session);
+   }
+
+   public void handleEnd(End end, byte[] payload, short channel) {
+      Session session = sessions.remove(channel);
+      sessionEnded(end, channel, session);
+
    }
 
 
-   protected abstract void connectionOpened(Open open);
+   protected void connectionOpened(Open open, Connection connection) {
+      sendOpen(connection);
+   }
 
-   protected abstract void connectionClosed(Close close);
+   protected void connectionClosed(Close close, Connection connection) {
+      sendClose(connection);
+   }
 
-   protected abstract void sessionOpened(Begin begin, Session session);
+   protected void sessionBegin(Begin begin, Session session) {
+      sendBegin(begin, session);
+   }
 
+   protected void sessionEnded(End end, short channel, Session session) {
+      sendEnd(session, channel, end);
+   }
 
 
    public Connection createConnection() {
       return new Connection(this);
    }
 
-   protected void sendBegin(Session session, Begin begin) {
+   protected void sendBegin(Begin begin, Session session) {
      sendFrame(session.getChannel(), (byte)0, begin);
+   }
+
+   protected void sendEnd(Session session, short channel, End end) {
+      sendFrame(channel, (byte)0, end);
    }
 
    @Override

@@ -42,7 +42,8 @@ public class Session extends EndpointImpl {
    private int _incomingDeliveries = 0;
    private int _outgoingDeliveries = 0;
    private short channel;
-   private long _outgoingWindow = Integer.MAX_VALUE;
+   private int _outgoingWindow = Integer.MAX_VALUE;
+   private int _incomingWindow = 0;
    private Map<Object, Object> _properties;
    private Map<Object, Object> _remoteProperties;
    private Symbol[] _offeredCapabilities;
@@ -50,7 +51,6 @@ public class Session extends EndpointImpl {
    private Symbol[] _desiredCapabilities;
    private Symbol[] _remoteDesiredCapabilities;
 
-   private long outgoingWindow;
 
 
    public Session(Connection connection)
@@ -187,7 +187,16 @@ public class Session extends EndpointImpl {
       //getConnection().getProcessor().sendSessionClose(this);
    }
 
-   public void setOutgoingWindow(long outgoingWindow) {
+   public int getIncomingWindow() {
+      return _incomingWindow;
+   }
+
+   public Session setIncomingWindow(int _incomingWindow) {
+      this._incomingWindow = _incomingWindow;
+      return this;
+   }
+
+   public void setOutgoingWindow(int outgoingWindow) {
       if(outgoingWindow < 0 || outgoingWindow > 0xFFFFFFFFL)
       {
          throw new IllegalArgumentException("Value '" + outgoingWindow + "' must be in the"
@@ -197,7 +206,7 @@ public class Session extends EndpointImpl {
       _outgoingWindow = outgoingWindow;
    }
 
-   public long getOutgoingWindow()
+   public int getOutgoingWindow()
    {
       return _outgoingWindow;
    }

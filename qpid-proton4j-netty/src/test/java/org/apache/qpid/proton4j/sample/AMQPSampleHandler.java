@@ -18,10 +18,13 @@
 package org.apache.qpid.proton4j.sample;
 
 import io.netty.channel.Channel;
+import org.apache.qpid.proton4j.amqp.UnsignedInteger;
 import org.apache.qpid.proton4j.amqp.UnsignedShort;
 import org.apache.qpid.proton4j.amqp.transport.Begin;
 import org.apache.qpid.proton4j.amqp.transport.Close;
+import org.apache.qpid.proton4j.amqp.transport.End;
 import org.apache.qpid.proton4j.amqp.transport.Open;
+import org.apache.qpid.proton4j.engine.state.Connection;
 import org.apache.qpid.proton4j.engine.state.EndpointState;
 import org.apache.qpid.proton4j.engine.state.Session;
 import org.apache.qpid.proton4j.netty.AMQPHandler;
@@ -37,7 +40,7 @@ public class AMQPSampleHandler extends AMQPHandler {
    }
 
    @Override
-   public void connectionOpened(Open open) {
+   public void connectionOpened(Open open, Connection connection) {
       connection.setContainer(connection.getRemoteContainer());
       connection.setOfferedCapabilities(connection.getRemoteDesiredCapabilities());
       connection.setHostname("localhost");
@@ -49,23 +52,29 @@ public class AMQPSampleHandler extends AMQPHandler {
       // If it was up to me, we would always call send directly.
       // but I will need a discussion with the qpid team
       connection.open();
+
+      super.connectionOpened(open, connection);
    }
 
    @Override
-   protected void connectionClosed(Close close) {
+   protected void sessionEnded(End end, short channel, Session session) {
+      super.sessionEnded(end, channel, session);
+   }
+
+   @Override
+   protected void connectionClosed(Close close, Connection connection) {
       connection.close();
-//      nettyChannel.close();
-//      nettyChannel.flush();
+      super.connectionClosed(close, connection);
    }
 
    @Override
-   protected void sessionOpened(Begin begin, Session session) {
+   protected void sessionBegin(Begin begin, Session session) {
       session.setLocalState(EndpointState.ACTIVE);
       session.setProperties(begin.getProperties());
       session.setDesiredCapabilities(begin.getDesiredCapabilities());
       session.setOfferedCapabilities(begin.getOfferedCapabilities());
+      begin.setIncomingWindow(new UnsignedInteger(session.getIncomingWindow()));
       begin.setRemoteChannel(new UnsignedShort(session.getChannel()));
-      sendBegin(session, begin);
-
+      super.sessionBegin(begin, session);
    }
 }
