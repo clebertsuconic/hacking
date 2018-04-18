@@ -24,6 +24,8 @@ import java.util.EnumSet;
 import java.util.Map;
 
 import org.apache.qpid.proton4j.amqp.*;
+import org.apache.qpid.proton4j.amqp.transport.ReceiverSettleMode;
+import org.apache.qpid.proton4j.amqp.transport.SenderSettleMode;
 
 public abstract class LinkImpl extends Endpoint {
 
@@ -51,7 +53,6 @@ public abstract class LinkImpl extends Endpoint {
     private ReceiverSettleMode _remoteReceiverSettleMode;
 
 
-    private LinkNode<LinkImpl> _node;
     private boolean _drain;
     private boolean _detached;
     private Map<Symbol, Object> _properties;
@@ -61,140 +62,138 @@ public abstract class LinkImpl extends Endpoint {
     private Symbol[] _desiredCapabilities;
     private Symbol[] _remoteDesiredCapabilities;
 
-    LinkImpl(SessionImpl session, String name)
+    LinkImpl(Session session, String name)
     {
         _session = session;
         _session.incref();
         _name = name;
-        ConnectionImpl conn = session.getConnectionImpl();
-        _node = conn.addLinkEndpoint(this);
-        conn.put(Event.Type.LINK_INIT, this);
+        Connection conn = session.getConnection();
     }
 
 
-    @Override
+    
     public String getName()
     {
         return _name;
     }
 
-    @Override
-    public DeliveryImpl delivery(byte[] tag)
+//
+//    public DeliveryImpl delivery(byte[] tag)
+//    {
+//        return delivery(tag, 0, tag.length);
+//    }
+
+    
+//    public DeliveryImpl delivery(byte[] tag, int offset, int length)
+//    {
+//        if (offset != 0 || length != tag.length)
+//        {
+//            throw new IllegalArgumentException("At present delivery tag must be the whole byte array");
+//        }
+//        incrementQueued();
+//        try
+//        {
+//            DeliveryImpl delivery = new DeliveryImpl(tag, this, _tail);
+//            if (_tail == null)
+//            {
+//                _head = delivery;
+//            }
+//            _tail = delivery;
+//            if (_current == null)
+//            {
+//                _current = delivery;
+//            }
+//            getConnectionImpl().workUpdate(delivery);
+//            return delivery;
+//        }
+//        catch (RuntimeException e)
+//        {
+//            e.printStackTrace();
+//            throw e;
+//        }
+//    }
+//
+//
+//    void postFinal() {
+//        _session.getConnectionImpl().put(Event.Type.LINK_FINAL, this);
+//        _session.decref();
+//    }
+//
+//
+//    void doFree()
+//    {
+//        DeliveryImpl dlv = _head;
+//        while (dlv != null) {
+//            DeliveryImpl next = dlv.next();
+//            dlv.free();
+//            dlv = next;
+//        }
+//
+//        _session.getConnectionImpl().removeLinkEndpoint(_node);
+//        _node = null;
+//    }
+//
+//    void modifyEndpoints() {
+//        modified();
+//    }
+//
+//    /*
+//     * Called when settling a message to ensure that the head/tail refs of the link are updated.
+//     * The caller ensures the delivery updates its own refs appropriately.
+//     */
+//    void remove(DeliveryImpl delivery)
+//    {
+//        if(_head == delivery)
+//        {
+//            _head = delivery.getLinkNext();
+//        }
+//        if(_tail == delivery)
+//        {
+//            _tail = delivery.getLinkPrevious();
+//        }
+//    }
+//
+//
+//    public DeliveryImpl current()
+//    {
+//        return _current;
+//    }
+//
+//
+//    public boolean advance()
+//    {
+//        if(_current != null )
+//        {
+//            DeliveryImpl oldCurrent = _current;
+//            _current = _current.getLinkNext();
+//            getConnectionImpl().workUpdate(oldCurrent);
+//
+//            if(_current != null)
+//            {
+//                getConnectionImpl().workUpdate(_current);
+//            }
+//            return true;
+//        }
+//        else
+//        {
+//            return false;
+//        }
+//
+//    }
+
+    
+    protected Connection getConnectionImpl()
     {
-        return delivery(tag, 0, tag.length);
+        return _session.getConnection();
     }
 
-    @Override
-    public DeliveryImpl delivery(byte[] tag, int offset, int length)
-    {
-        if (offset != 0 || length != tag.length)
-        {
-            throw new IllegalArgumentException("At present delivery tag must be the whole byte array");
-        }
-        incrementQueued();
-        try
-        {
-            DeliveryImpl delivery = new DeliveryImpl(tag, this, _tail);
-            if (_tail == null)
-            {
-                _head = delivery;
-            }
-            _tail = delivery;
-            if (_current == null)
-            {
-                _current = delivery;
-            }
-            getConnectionImpl().workUpdate(delivery);
-            return delivery;
-        }
-        catch (RuntimeException e)
-        {
-            e.printStackTrace();
-            throw e;
-        }
-    }
-
-    @Override
-    void postFinal() {
-        _session.getConnectionImpl().put(Event.Type.LINK_FINAL, this);
-        _session.decref();
-    }
-
-    @Override
-    void doFree()
-    {
-        DeliveryImpl dlv = _head;
-        while (dlv != null) {
-            DeliveryImpl next = dlv.next();
-            dlv.free();
-            dlv = next;
-        }
-
-        _session.getConnectionImpl().removeLinkEndpoint(_node);
-        _node = null;
-    }
-
-    void modifyEndpoints() {
-        modified();
-    }
-
-    /*
-     * Called when settling a message to ensure that the head/tail refs of the link are updated.
-     * The caller ensures the delivery updates its own refs appropriately.
-     */
-    void remove(DeliveryImpl delivery)
-    {
-        if(_head == delivery)
-        {
-            _head = delivery.getLinkNext();
-        }
-        if(_tail == delivery)
-        {
-            _tail = delivery.getLinkPrevious();
-        }
-    }
-
-    @Override
-    public DeliveryImpl current()
-    {
-        return _current;
-    }
-
-    @Override
-    public boolean advance()
-    {
-        if(_current != null )
-        {
-            DeliveryImpl oldCurrent = _current;
-            _current = _current.getLinkNext();
-            getConnectionImpl().workUpdate(oldCurrent);
-
-            if(_current != null)
-            {
-                getConnectionImpl().workUpdate(_current);
-            }
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-
-    }
-
-    @Override
-    protected ConnectionImpl getConnectionImpl()
-    {
-        return _session.getConnectionImpl();
-    }
-
-    @Override
-    public SessionImpl getSession()
+    
+    public Session getSession()
     {
         return _session;
     }
 
-    @Override
+    
     public Source getRemoteSource()
     {
         return _remoteSource;
@@ -205,7 +204,7 @@ public abstract class LinkImpl extends Endpoint {
         _remoteSource = source;
     }
 
-    @Override
+    
     public Target getRemoteTarget()
     {
         return _remoteTarget;
@@ -216,46 +215,36 @@ public abstract class LinkImpl extends Endpoint {
         _remoteTarget = target;
     }
 
-    @Override
+    
     public Source getSource()
     {
         return _source;
     }
 
-    @Override
+    
     public void setSource(Source source)
     {
         // TODO - should be an error if local state is ACTIVE
         _source = source;
     }
 
-    @Override
+    
     public Target getTarget()
     {
         return _target;
     }
 
-    @Override
+    
     public void setTarget(Target target)
     {
         // TODO - should be an error if local state is ACTIVE
         _target = target;
     }
 
-    @Override
-    public Link next(EnumSet<EndpointState> local, EnumSet<EndpointState> remote)
-    {
-        LinkNode.Query<LinkImpl> query = new EndpointImplQuery<LinkImpl>(local, remote);
-
-        LinkNode<LinkImpl> linkNode = _node.next(query);
-
-        return linkNode == null ? null : linkNode.getValue();
-
-    }
 
     abstract TransportLink getTransportLink();
 
-    @Override
+    
     public int getCredit()
     {
         return _credit;
@@ -286,7 +275,7 @@ public abstract class LinkImpl extends Endpoint {
         _credit--;
     }
 
-    @Override
+    
     public int getQueued()
     {
         return _queued;
@@ -302,7 +291,7 @@ public abstract class LinkImpl extends Endpoint {
         _queued--;
     }
 
-    @Override
+    
     public int getUnsettled()
     {
         return _unsettled;
@@ -323,49 +312,49 @@ public abstract class LinkImpl extends Endpoint {
         _drain = drain;
     }
 
-    @Override
+    
     public boolean getDrain()
     {
         return _drain;
     }
 
-    @Override
+    
     public SenderSettleMode getSenderSettleMode()
     {
         return _senderSettleMode;
     }
 
-    @Override
+    
     public void setSenderSettleMode(SenderSettleMode senderSettleMode)
     {
         _senderSettleMode = senderSettleMode;
     }
 
-    @Override
+    
     public SenderSettleMode getRemoteSenderSettleMode()
     {
         return _remoteSenderSettleMode;
     }
 
-    @Override
+    
     public void setRemoteSenderSettleMode(SenderSettleMode remoteSenderSettleMode)
     {
         _remoteSenderSettleMode = remoteSenderSettleMode;
     }
 
-    @Override
+    
     public ReceiverSettleMode getReceiverSettleMode()
     {
         return _receiverSettleMode;
     }
 
-    @Override
+    
     public void setReceiverSettleMode(ReceiverSettleMode receiverSettleMode)
     {
         _receiverSettleMode = receiverSettleMode;
     }
 
-    @Override
+    
     public ReceiverSettleMode getRemoteReceiverSettleMode()
     {
         return _remoteReceiverSettleMode;
@@ -376,19 +365,19 @@ public abstract class LinkImpl extends Endpoint {
         _remoteReceiverSettleMode = remoteReceiverSettleMode;
     }
 
-    @Override
+    
     public Map<Symbol, Object> getProperties()
     {
         return _properties;
     }
 
-    @Override
+    
     public void setProperties(Map<Symbol, Object> properties)
     {
         _properties = properties;
     }
 
-    @Override
+    
     public Map<Symbol, Object> getRemoteProperties()
     {
         return _remoteProperties;
@@ -399,19 +388,19 @@ public abstract class LinkImpl extends Endpoint {
         _remoteProperties = remoteProperties;
     }
 
-    @Override
+    
     public Symbol[] getDesiredCapabilities()
     {
         return _desiredCapabilities;
     }
 
-    @Override
+    
     public void setDesiredCapabilities(Symbol[] desiredCapabilities)
     {
         _desiredCapabilities = desiredCapabilities;
     }
 
-    @Override
+    
     public Symbol[] getRemoteDesiredCapabilities()
     {
         return _remoteDesiredCapabilities;
@@ -422,19 +411,19 @@ public abstract class LinkImpl extends Endpoint {
         _remoteDesiredCapabilities = remoteDesiredCapabilities;
     }
 
-    @Override
+    
     public Symbol[] getOfferedCapabilities()
     {
         return _offeredCapabilities;
     }
 
-    @Override
+    
     public void setOfferedCapabilities(Symbol[] offeredCapabilities)
     {
         _offeredCapabilities = offeredCapabilities;
     }
 
-    @Override
+    
     public Symbol[] getRemoteOfferedCapabilities()
     {
         return _remoteOfferedCapabilities;
@@ -445,19 +434,19 @@ public abstract class LinkImpl extends Endpoint {
         _remoteOfferedCapabilities = remoteOfferedCapabilities;
     }
 
-    @Override
+    
     public UnsignedLong getMaxMessageSize()
     {
         return _maxMessageSize;
     }
 
-    @Override
+    
     public void setMaxMessageSize(UnsignedLong maxMessageSize)
     {
         _maxMessageSize = maxMessageSize;
     }
 
-    @Override
+    
     public UnsignedLong getRemoteMaxMessageSize()
     {
         return _remoteMaxMessageSize;
@@ -468,8 +457,8 @@ public abstract class LinkImpl extends Endpoint {
         _remoteMaxMessageSize = remoteMaxMessageSize;
     }
 
-    @Override
-    public int drained()
+    
+    /* public int drained()
     {
         int drained = 0;
 
@@ -497,33 +486,33 @@ public abstract class LinkImpl extends Endpoint {
     void setDrained(int value)
     {
         _drained = value;
-    }
+    } */
 
-    @Override
+    
     public DeliveryImpl head()
     {
         return _head;
     }
 
-    @Override
-    void localOpen()
+    
+    /* void localOpen()
     {
         getConnectionImpl().put(Event.Type.LINK_LOCAL_OPEN, this);
     }
 
-    @Override
+    
     void localClose()
     {
         getConnectionImpl().put(Event.Type.LINK_LOCAL_CLOSE, this);
     }
 
-    @Override
+    
     public void detach()
     {
         _detached = true;
         getConnectionImpl().put(Event.Type.LINK_LOCAL_DETACH, this);
         modified();
-    }
+    } */
 
     public boolean detached()
     {

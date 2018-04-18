@@ -21,6 +21,7 @@
 
 package org.apache.qpid.proton4j.engine.state;
 
+import org.apache.qpid.proton4j.amqp.transport.ErrorCondition;
 
 public abstract class Endpoint
 {

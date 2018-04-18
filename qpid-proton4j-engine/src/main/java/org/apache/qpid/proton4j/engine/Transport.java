@@ -15,21 +15,23 @@
  * limitations under the License.
  */
 
-package org.apache.qpid.proton4j.sample;
-
-import io.netty.channel.ChannelHandlerContext;
-import org.apache.qpid.proton4j.netty.AMQPHandler;
-import org.apache.qpid.proton4j.netty.AMQPHandshaker;
+package org.apache.qpid.proton4j.engine;
 
 /**
  * @author Clebert Suconic
  */
 
-public class AMQPSampleHandshaker extends AMQPHandshaker {
+public interface Transport {
 
-   @Override
-   protected AMQPHandler createHandler(ChannelHandlerContext ctx) {
-      return new AMQPSampleHandler(ctx.channel(), Integer.MAX_VALUE);
-   }
+   /**
+    * Get the maximum frame size for the transport
+    *
+    * @return the maximum frame size
+    */
+   int getMaxFrameSize();
+
+   void setMaxFrameSize(int size);
+
+   int getRemoteMaxFrameSize();
 
 }

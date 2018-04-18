@@ -22,8 +22,9 @@
 package org.apache.qpid.proton4j.engine.state;
 
 import org.apache.qpid.proton4j.amqp.UnsignedInteger;
+import org.apache.qpid.proton4j.amqp.transport.Flow;
 
-class TransportLink<T extends LinkImpl>
+public class TransportLink<T extends LinkImpl>
 {
     private UnsignedInteger _localHandle;
     private String _name;
@@ -42,25 +43,6 @@ class TransportLink<T extends LinkImpl>
         _name = link.getName();
     }
 
-    static <L extends LinkImpl> TransportLink<L> createTransportLink(L link)
-    {
-        if (link instanceof ReceiverImpl)
-        {
-            ReceiverImpl r = (ReceiverImpl) link;
-            TransportReceiver tr = new TransportReceiver(r);
-            r.setTransportLink(tr);
-
-            return (TransportLink<L>) tr;
-        }
-        else
-        {
-            SenderImpl s = (SenderImpl) link;
-            TransportSender ts = new TransportSender(s);
-            s.setTransportLink(ts);
-
-            return (TransportLink<L>) ts;
-        }
-    }
 
     void unbind()
     {
@@ -152,11 +134,11 @@ class TransportLink<T extends LinkImpl>
 
     void handleFlow(Flow flow)
     {
-        _remoteDeliveryCount = flow.getDeliveryCount();
-        _remoteLinkCredit = flow.getLinkCredit();
-
-
-        _link.getConnectionImpl().put(Event.Type.LINK_FLOW, _link);
+//        _remoteDeliveryCount = flow.getDeliveryCount();
+//        _remoteLinkCredit = flow.getLinkCredit();
+//
+//
+//        _link.getConnectionImpl().put(Event.Type.LINK_FLOW, _link);
     }
 
     void setLinkCredit(UnsignedInteger linkCredit)
@@ -169,10 +151,10 @@ class TransportLink<T extends LinkImpl>
         _deliveryCount = deliveryCount;
     }
 
-    public void settled(TransportDelivery transportDelivery)
-    {
-        getLink().getSession().getTransportSession().settled(transportDelivery);
-    }
+//    public void settled(TransportDelivery transportDelivery)
+//    {
+//        getLink().getSession().getTransportSession().settled(transportDelivery);
+//    }
 
 
     UnsignedInteger getRemoteDeliveryCount()

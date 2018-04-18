@@ -108,7 +108,7 @@ public class NettyBufferTests {
       writeBuffer1.clear();
 
       AMQPHandler.writePerformative(writeBuffer1, (byte)5, (short)33, performative);
-      AMQPHandler handler = new AMQPSampleHandler(null);
+      AMQPHandler handler = new AMQPSampleHandler(null, Integer.MAX_VALUE);
       handler.readFrame(writeBuffer1);
       // this will validate we can actually read stuff
       performative = (Open)handler.getCurrentPerformative();

@@ -92,17 +92,6 @@ public class Connection extends Endpoint {
       setRemoteState(EndpointState.CLOSED);
    }
 
-   public void handleOpen(Open open)
-   {
-      setRemoteState(EndpointState.ACTIVE);
-      setRemoteHostname(open.getHostname());
-      setRemoteContainer(open.getContainerId());
-      setRemoteDesiredCapabilities(open.getDesiredCapabilities());
-      setRemoteOfferedCapabilities(open.getOfferedCapabilities());
-      setRemoteProperties(open.getProperties());
-      setRemoteIdleTimeout(open.getIdleTimeOut());
-   }
-
    public UnsignedInteger getRemoteIdleTimeout() {
       return remoteIdleTimeout;
    }
@@ -181,22 +170,22 @@ public class Connection extends Endpoint {
    }
 
 
-   Symbol[] getOfferedCapabilities()
+   public Symbol[] getOfferedCapabilities()
    {
       return _offeredCapabilities;
    }
 
-   Symbol[] getDesiredCapabilities()
+   public Symbol[] getDesiredCapabilities()
    {
       return _desiredCapabilities;
    }
 
-   void setRemoteOfferedCapabilities(Symbol[] remoteOfferedCapabilities)
+   public void setRemoteOfferedCapabilities(Symbol[] remoteOfferedCapabilities)
    {
       _remoteOfferedCapabilities = remoteOfferedCapabilities;
    }
 
-   void setRemoteDesiredCapabilities(Symbol[] remoteDesiredCapabilities)
+   public void setRemoteDesiredCapabilities(Symbol[] remoteDesiredCapabilities)
    {
       _remoteDesiredCapabilities = remoteDesiredCapabilities;
    }
@@ -217,7 +206,7 @@ public class Connection extends Endpoint {
       return _remoteProperties;
    }
 
-   void setRemoteProperties(Map<Object, Object> remoteProperties)
+   public void setRemoteProperties(Map<Object, Object> remoteProperties)
    {
       _remoteProperties = remoteProperties;
    }
@@ -227,12 +216,12 @@ public class Connection extends Endpoint {
       return _localHostname;
    }
 
-   void setRemoteContainer(String remoteContainerId)
+   public void setRemoteContainer(String remoteContainerId)
    {
       _remoteContainer = remoteContainerId;
    }
 
-   void setRemoteHostname(String remoteHostname)
+   public void setRemoteHostname(String remoteHostname)
    {
       _remoteHostname = remoteHostname;
    }
@@ -247,22 +236,22 @@ public class Connection extends Endpoint {
       _context = context;
    }
 
-   void localOpen()
+   public void localOpen()
    {
    }
 
-   void localClose()
+   public void localClose()
    {
 
    }
 
    @Override
-   void postFinal() {
+   public void postFinal() {
 
    }
 
    @Override
-   void doFree() {
+   public void doFree() {
 
    }
 }

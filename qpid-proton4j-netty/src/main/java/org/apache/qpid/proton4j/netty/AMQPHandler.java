@@ -53,6 +53,8 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
    // setting to false will make the compiler to ignore the statements
    private static final boolean SYSTEM_OUT_DEBUG = false;
 
+
+
    public static void writePerformative(ProtonBuffer buffer, byte frameType, short channel, Performative performative) {
       buffer.writeInt(0);
       buffer.writeByte(2);
@@ -75,10 +77,12 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
 
    protected final Channel nettyChannel;
 
-   public AMQPHandler(Channel channel) {
+   public AMQPHandler(Channel channel, int maxFrameSize) {
       nettyChannel = channel;
+      this.maxFrameSize = maxFrameSize;
    }
 
+   // TODO move into connections?
    Short2ObjectMap<Session> sessions = new Short2ObjectOpenHashMap<>(2, 0.75f);
 
    // TODO: Perhaps use ChannelLocal? they seem faster
@@ -96,6 +100,9 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
    protected Performative currentPerformative;
 
    protected Connection connection;
+
+   protected final int maxFrameSize;
+   protected int remoteFrameSize;
 
 
    // Connection
@@ -180,7 +187,14 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
          return;
       }
       connection = createConnection();
-      connection.handleOpen(open);
+      connection.setRemoteState(EndpointState.ACTIVE);
+      connection.setRemoteHostname(open.getHostname());
+      connection.setRemoteContainer(open.getContainerId());
+      connection.setRemoteDesiredCapabilities(open.getDesiredCapabilities());
+      connection.setRemoteOfferedCapabilities(open.getOfferedCapabilities());
+      connection.setRemoteProperties(open.getProperties());
+      connection.setRemoteIdleTimeout(open.getIdleTimeOut());
+
       connectionOpened(open, connection);
    }
 
@@ -244,7 +258,7 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
 
    public void handleAttach(Attach attach) {
 
-      Session session = sessions.get(currentChannel);
+      /* Session session = sessions.get(currentChannel);
 
       if (session == null) {
          sendError("Session does not exist");
@@ -259,7 +273,7 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
             sendError(ConnectionError.FRAMING_ERROR, "handle-max exceeded");
             return;
          }
-         TransportLink<?> transportLink = transportSession.getLinkFromRemoteHandle(handle);
+         TransportLink transportLink = transportSession.getLinkFromRemoteHandle(handle);
          LinkImpl link = null;
 
          if(transportLink != null)
@@ -309,7 +323,7 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
 
          }
 
-         _connectionEndpoint.put(Event.Type.LINK_REMOTE_OPEN, link);
+         _connectionEndpoint.put(Event.Type.LINK_REMOTE_OPEN, link);*/
 
    }
 
@@ -321,6 +335,7 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
 
 
    protected void connectionOpened(Open open, Connection connection) {
+      this.remoteFrameSize = open.getMaxFrameSize().intValue();
       sendOpen(connection);
    }
 
@@ -352,6 +367,7 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
    @Override
    public void sendOpen(Connection connection) {
       Open open = new Open();
+      open.setMaxFrameSize(new UnsignedInteger(maxFrameSize));
       open.setChannelMax(connection.getMaxChannels());
       open.setIdleTimeOut(connection.getLocalIdleTimeout());
       open.setContainerId(connection.getRemoteContainer());

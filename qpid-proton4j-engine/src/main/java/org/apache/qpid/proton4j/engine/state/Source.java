@@ -24,10 +24,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.qpid.proton.amqp.Symbol;
+import org.apache.qpid.proton4j.amqp.Symbol;
+import org.apache.qpid.proton4j.amqp.messaging.Outcome;
 
 public final class Source extends Terminus
-      implements org.apache.qpid.proton.amqp.transport.Source
 {
     private Symbol _distributionMode;
     private Map _filter;
@@ -105,8 +105,7 @@ public final class Source extends Terminus
                '}';
     }
 
-    @Override
-    public org.apache.qpid.proton.amqp.transport.Source copy() {
+    public Source copy() {
         return new Source(this);
     }
 }

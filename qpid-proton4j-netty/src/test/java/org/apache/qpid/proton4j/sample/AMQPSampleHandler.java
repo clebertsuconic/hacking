@@ -35,8 +35,8 @@ import org.apache.qpid.proton4j.netty.AMQPHandler;
 
 public class AMQPSampleHandler extends AMQPHandler {
 
-   public AMQPSampleHandler(Channel channel) {
-      super(channel);
+   public AMQPSampleHandler(Channel channel, int maxFrameSize) {
+      super(channel, maxFrameSize);
    }
 
    @Override

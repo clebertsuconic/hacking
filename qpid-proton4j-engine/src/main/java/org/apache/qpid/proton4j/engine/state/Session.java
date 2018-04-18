@@ -17,7 +17,10 @@
 
 package org.apache.qpid.proton4j.engine.state;
 
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.qpid.proton4j.amqp.Symbol;
 import org.apache.qpid.proton4j.amqp.UnsignedInteger;
@@ -48,6 +51,7 @@ public class Session extends Endpoint {
    private Symbol[] _desiredCapabilities;
    private Symbol[] _remoteDesiredCapabilities;
    private UnsignedInteger _handleMax;
+   private HashSet<LinkImpl> links;
 
 
 
@@ -64,6 +68,27 @@ public class Session extends Endpoint {
    public Session setChannel(short channel) {
       this.channel = channel;
       return this;
+   }
+
+   public void addLink(LinkImpl link) {
+      if (links == null) {
+         links = new HashSet<>();
+      }
+      links.add(link);
+   }
+
+   public void removeLink(LinkImpl link) {
+      if (links != null) {
+         links.remove(link);
+      }
+   }
+
+   public Set<LinkImpl> getLinks() {
+      if (links == null) {
+         return Collections.emptySet();
+      } else {
+         return links;
+      }
    }
 
    //
@@ -145,7 +170,7 @@ public class Session extends Endpoint {
       return _incomingBytes;
    }
 
-   void incrementIncomingBytes(int delta)
+   public void incrementIncomingBytes(int delta)
    {
       _incomingBytes += delta;
    }
@@ -155,22 +180,22 @@ public class Session extends Endpoint {
       return _outgoingBytes;
    }
 
-   void incrementOutgoingBytes(int delta)
+   public void incrementOutgoingBytes(int delta)
    {
       _outgoingBytes += delta;
    }
 
-   void incrementIncomingDeliveries(int delta)
+   public void incrementIncomingDeliveries(int delta)
    {
       _incomingDeliveries += delta;
    }
 
-   int getOutgoingDeliveries()
+   public int getOutgoingDeliveries()
    {
       return _outgoingDeliveries;
    }
 
-   void incrementOutgoingDeliveries(int delta)
+   public void incrementOutgoingDeliveries(int delta)
    {
       _outgoingDeliveries += delta;
    }
@@ -184,12 +209,12 @@ public class Session extends Endpoint {
       return this;
    }
 
-   void localOpen()
+   public void localOpen()
    {
       //getConnection().getProcessor().sendSessionOpen(this);
    }
 
-   void localClose()
+   public void localClose()
    {
       //getConnection().getProcessor().sendSessionClose(this);
    }

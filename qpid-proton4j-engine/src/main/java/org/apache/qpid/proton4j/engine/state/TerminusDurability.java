@@ -23,7 +23,7 @@
 
 package org.apache.qpid.proton4j.engine.state;
 
-import org.apache.qpid.proton.amqp.UnsignedInteger;
+import org.apache.qpid.proton4j.amqp.UnsignedInteger;
 
 public enum TerminusDurability
 {
