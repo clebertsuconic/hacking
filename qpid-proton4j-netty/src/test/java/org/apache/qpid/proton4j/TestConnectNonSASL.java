@@ -51,7 +51,7 @@ public class TestConnectNonSASL {
       Connection connection = factory.createConnection();
       Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
       Queue queue = session.createQueue("test");
-      //MessageProducer producer = session.createProducer(queue);
+      MessageProducer producer = session.createProducer(queue);
       session.close();
       connection.close();
 

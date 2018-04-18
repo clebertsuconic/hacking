@@ -22,7 +22,7 @@
 package org.apache.qpid.proton4j.engine.state;
 
 
-public abstract class EndpointImpl
+public abstract class Endpoint
 {
     private EndpointState _localState = EndpointState.UNINITIALIZED;
     private EndpointState _remoteState = EndpointState.UNINITIALIZED;

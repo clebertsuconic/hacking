@@ -33,7 +33,7 @@ import org.apache.qpid.proton4j.engine.Processor;
  * @author Clebert Suconic
  */
 
-public class Connection extends EndpointImpl {
+public class Connection extends Endpoint {
    private final Processor processor;
 
    public static final UnsignedShort MAX_CHANNELS = UnsignedShort.MAX_VALUE;

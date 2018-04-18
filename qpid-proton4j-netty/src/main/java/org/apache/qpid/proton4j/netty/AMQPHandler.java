@@ -26,9 +26,13 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectMap;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
+import org.apache.qpid.proton4j.amqp.Symbol;
+import org.apache.qpid.proton4j.amqp.UnsignedInteger;
+import org.apache.qpid.proton4j.amqp.transport.Attach;
 import org.apache.qpid.proton4j.amqp.transport.Begin;
 import org.apache.qpid.proton4j.amqp.transport.Close;
 import org.apache.qpid.proton4j.amqp.transport.End;
+import org.apache.qpid.proton4j.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton4j.amqp.transport.Open;
 import org.apache.qpid.proton4j.amqp.transport.Performative;
 import org.apache.qpid.proton4j.buffer.ProtonBuffer;
@@ -117,16 +121,19 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
 
       switch (currentPerformative.getPerformativeType()) {
          case OPEN:
-            handleOpen((Open) currentPerformative, currentPayload, currentChannel);
+            handleOpen((Open) currentPerformative);
             break;
          case CLOSE:
-            handleClose((Close) currentPerformative, currentPayload, currentChannel);
+            handleClose((Close) currentPerformative);
             break;
          case BEGIN:
-            handleBegin((Begin) currentPerformative, currentPayload, currentChannel);
+            handleBegin((Begin) currentPerformative);
             break;
          case END:
-            handleEnd((End) currentPerformative, currentPayload, currentChannel);
+            handleEnd((End) currentPerformative);
+            break;
+         case ATTACH:
+            handleAttach((Attach) currentPerformative);
             break;
          default:
             System.out.println("Normative " + currentPerformative + " not implemented yet");
@@ -166,7 +173,7 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
       nettyChannel.close();
    }
 
-   public void handleOpen(Open open, byte[] payload, short channel)
+   public void handleOpen(Open open)
    {
       if (connection != null && connection.getRemoteState() == EndpointState.ACTIVE) {
          sendError("Connection previously open");
@@ -177,7 +184,7 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
       connectionOpened(open, connection);
    }
 
-   public void handleClose(Close close, byte[] payload, short channel)
+   public void handleClose(Close close)
    {
       if (connection != null && connection.getRemoteState() == EndpointState.ACTIVE) {
          sendError("Connection previously open");
@@ -187,7 +194,7 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
       connectionClosed(close, connection);
    }
 
-   public void handleBegin(Begin begin, byte[] payload, short channel)
+   public void handleBegin(Begin begin)
    {
       if (connection == null) {
          sendError("no connection opened");
@@ -199,12 +206,12 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
       if(begin.getRemoteChannel() == null)
       {
          session = connection.newSession();
-         if (sessions.get(channel) != null) {
+         if (sessions.get(currentChannel) != null) {
             sendError("Session previously set");
             return;
          }
-         session.setChannel(channel);
-         sessions.put(channel, session);
+         session.setChannel(currentChannel);
+         sessions.put(currentChannel, session);
       }
       else
       {
@@ -213,9 +220,10 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
             sendError("uncorrelated channel " + begin.getRemoteChannel());
          }
       }
-      session.setChannel(channel);
+      session.setChannel(currentChannel);
       session.setRemoteState(EndpointState.ACTIVE);
       session.setRemoteProperties(begin.getProperties());
+      session.setHandleMax(begin.getHandleMax());
       session.setOutgoingWindow(begin.getOutgoingWindow().intValue());
       session.setIncomingWindow(begin.getIncomingWindow().intValue());
       session.setRemoteDesiredCapabilities(begin.getDesiredCapabilities());
@@ -223,9 +231,91 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
       sessionBegin(begin, session);
    }
 
-   public void handleEnd(End end, byte[] payload, short channel) {
-      Session session = sessions.remove(channel);
-      sessionEnded(end, channel, session);
+
+   public void sendError(Symbol symbol, String message) {
+
+      ErrorCondition condition = new ErrorCondition(symbol, message);
+      Close close = new Close();
+      close.setError(condition);
+      sendFrame((short)0, (byte)0, close);
+      nettyChannel.close();
+   }
+
+
+   public void handleAttach(Attach attach) {
+
+      Session session = sessions.get(currentChannel);
+
+      if (session == null) {
+         sendError("Session does not exist");
+         return;
+      }
+         final UnsignedInteger handle = attach.getHandle();
+         if (handle.compareTo(session.getHandleMax()) > 0) {
+            // The handle-max value is the highest handle value that can be used on the session. A peer MUST
+            // NOT attempt to attach a link using a handle value outside the range that its partner can handle.
+            // A peer that receives a handle outside the supported range MUST close the connection with the
+            // framing-error error-code.
+            sendError(ConnectionError.FRAMING_ERROR, "handle-max exceeded");
+            return;
+         }
+         TransportLink<?> transportLink = transportSession.getLinkFromRemoteHandle(handle);
+         LinkImpl link = null;
+
+         if(transportLink != null)
+         {
+            TransportLink<?> transportLink = transportSession.getLinkFromRemoteHandle(handle);
+            LinkImpl link = null;
+
+            // TODO - fail - attempt attach on a handle which is in use
+         }
+         else
+         {
+            transportLink = transportSession.resolveHalfOpenLink(attach.getName());
+            if(transportLink == null)
+            {
+
+               link = (attach.getRole() == Role.RECEIVER)
+                  ? session.sender(attach.getName())
+                  : session.receiver(attach.getName());
+               transportLink = getTransportState(link);
+            }
+            else
+            {
+               link = transportLink.getLink();
+            }
+            if(attach.getRole() == Role.SENDER)
+            {
+               transportLink.setDeliveryCount(attach.getInitialDeliveryCount());
+            }
+
+            link.setRemoteState(EndpointState.ACTIVE);
+            link.setRemoteSource(attach.getSource());
+            link.setRemoteTarget(attach.getTarget());
+
+            link.setRemoteReceiverSettleMode(attach.getRcvSettleMode());
+            link.setRemoteSenderSettleMode(attach.getSndSettleMode());
+
+            link.setRemoteProperties(attach.getProperties());
+
+            link.setRemoteDesiredCapabilities(attach.getDesiredCapabilities());
+            link.setRemoteOfferedCapabilities(attach.getOfferedCapabilities());
+
+            link.setRemoteMaxMessageSize(attach.getMaxMessageSize());
+
+            transportLink.setName(attach.getName());
+            transportLink.setRemoteHandle(handle);
+            transportSession.addLinkRemoteHandle(transportLink, handle);
+
+         }
+
+         _connectionEndpoint.put(Event.Type.LINK_REMOTE_OPEN, link);
+
+   }
+
+   public void handleEnd(End end) {
+      Session session = sessions.remove(currentChannel);
+      sessionEnded(end, currentChannel, session);
 
    }
 

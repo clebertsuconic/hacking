@@ -17,19 +17,16 @@
 
 package org.apache.qpid.proton4j.engine.state;
 
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.qpid.proton4j.amqp.Symbol;
+import org.apache.qpid.proton4j.amqp.UnsignedInteger;
 
 /**
  * @author Clebert Suconic
  */
 
-public class Session extends EndpointImpl {
+public class Session extends Endpoint {
    private final Connection _connection;
 //
 //   private Map<String, SenderImpl> _senders = new LinkedHashMap<String, SenderImpl>();
@@ -50,6 +47,7 @@ public class Session extends EndpointImpl {
    private Symbol[] _remoteOfferedCapabilities;
    private Symbol[] _desiredCapabilities;
    private Symbol[] _remoteDesiredCapabilities;
+   private UnsignedInteger _handleMax;
 
 
 
@@ -175,6 +173,15 @@ public class Session extends EndpointImpl {
    void incrementOutgoingDeliveries(int delta)
    {
       _outgoingDeliveries += delta;
+   }
+
+   public UnsignedInteger getHandleMax() {
+      return _handleMax;
+   }
+
+   public Session setHandleMax(UnsignedInteger _handleMax) {
+      this._handleMax = _handleMax;
+      return this;
    }
 
    void localOpen()
