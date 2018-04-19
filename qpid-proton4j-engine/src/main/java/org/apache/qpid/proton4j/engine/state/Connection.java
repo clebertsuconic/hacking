@@ -25,16 +25,14 @@ import org.apache.qpid.proton4j.amqp.Symbol;
 import org.apache.qpid.proton4j.amqp.UnsignedInteger;
 import org.apache.qpid.proton4j.amqp.UnsignedShort;
 import org.apache.qpid.proton4j.amqp.transport.Close;
-import org.apache.qpid.proton4j.amqp.transport.Open;
-import org.apache.qpid.proton4j.engine.EmptyProcessor;
-import org.apache.qpid.proton4j.engine.Processor;
+import org.apache.qpid.proton4j.engine.Transport;
 
 /**
  * @author Clebert Suconic
  */
 
 public class Connection extends Endpoint {
-   private final Processor processor;
+   private final Transport transport;
 
    public static final UnsignedShort MAX_CHANNELS = UnsignedShort.MAX_VALUE;
 
@@ -58,29 +56,24 @@ public class Connection extends Endpoint {
 
    private static final Symbol[] EMPTY_SYMBOL_ARRAY = new Symbol[0];
 
-   public Connection(Processor processor)
+   public Connection(Transport transport)
    {
-      if (processor == null) {
-         throw new NullPointerException("processor == null");
+      if (transport == null) {
+         throw new NullPointerException("transport == null");
       }
-      this.processor = processor;
-   }
-
-   public Connection()
-   {
-      this.processor = EmptyProcessor.get();
+      this.transport = transport;
    }
 
    public Session newSession()
    {
-      Session session = new Session(this);
+      Session session = new Session(this, transport);
       _sessions.add(session);
 
       return session;
    }
 
-   public Processor getProcessor() {
-      return processor;
+   public Transport getTransport() {
+      return transport;
    }
 
    void freeSession(Session session)

@@ -24,6 +24,7 @@ import java.util.Set;
 
 import org.apache.qpid.proton4j.amqp.Symbol;
 import org.apache.qpid.proton4j.amqp.UnsignedInteger;
+import org.apache.qpid.proton4j.engine.Transport;
 
 /**
  * @author Clebert Suconic
@@ -55,7 +56,7 @@ public class Session extends Endpoint {
 
 
 
-   public Session(Connection connection)
+   public Session(Connection connection, Transport transport)
    {
       _connection = connection;
       _connection.incref();

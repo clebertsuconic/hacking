@@ -30,8 +30,6 @@ public interface Transport {
     */
    int getMaxFrameSize();
 
-   void setMaxFrameSize(int size);
-
    int getRemoteMaxFrameSize();
 
 }

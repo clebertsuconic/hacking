@@ -39,21 +39,22 @@ import org.apache.qpid.proton4j.buffer.ProtonBuffer;
 import org.apache.qpid.proton4j.codec.CodecFactory;
 import org.apache.qpid.proton4j.codec.DecoderState;
 import org.apache.qpid.proton4j.codec.EncoderState;
-import org.apache.qpid.proton4j.engine.Processor;
+import org.apache.qpid.proton4j.engine.Transport;
+import org.apache.qpid.proton4j.engine.state.Connection;
+import org.apache.qpid.proton4j.engine.state.ConnectionError;
+import org.apache.qpid.proton4j.engine.state.EndpointState;
+import org.apache.qpid.proton4j.engine.state.Session;
 import org.apache.qpid.proton4j.netty.buffer.NettyProtonBuffer;
-import org.apache.qpid.proton4j.engine.state.*;
 
 /**
  * @author Clebert Suconic
  */
 
-public abstract class AMQPHandler extends ChannelDuplexHandler implements Processor {
+public abstract class AMQPHandler extends ChannelDuplexHandler implements Transport {
 
    // I like this to be able to debug this
    // setting to false will make the compiler to ignore the statements
    private static final boolean SYSTEM_OUT_DEBUG = false;
-
-
 
    public static void writePerformative(ProtonBuffer buffer, byte frameType, short channel, Performative performative) {
       buffer.writeInt(0);
@@ -67,13 +68,10 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
       buffer.setInt(0, buffer.getWriteIndex());
    }
 
-
    public static Performative readPerformative(ProtonBuffer buffer) throws IOException {
       DecoderState state = decoderStateThreadLocal.get();
-      return (Performative)state.getDecoder().readObject(buffer, state);
+      return (Performative) state.getDecoder().readObject(buffer, state);
    }
-
-
 
    protected final Channel nettyChannel;
 
@@ -102,15 +100,13 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
    protected Connection connection;
 
    protected final int maxFrameSize;
-   protected int remoteFrameSize;
-
+   protected int remoteFrameSize = 512;
 
    // Connection
 
    public Performative getCurrentPerformative() {
       return currentPerformative;
    }
-
 
    @Override
    public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
@@ -180,12 +176,12 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
       nettyChannel.close();
    }
 
-   public void handleOpen(Open open)
-   {
+   public void handleOpen(Open open) {
       if (connection != null && connection.getRemoteState() == EndpointState.ACTIVE) {
          sendError("Connection previously open");
          return;
       }
+      this.remoteFrameSize = open.getMaxFrameSize().intValue();
       connection = createConnection();
       connection.setRemoteState(EndpointState.ACTIVE);
       connection.setRemoteHostname(open.getHostname());
@@ -198,8 +194,7 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
       connectionOpened(open, connection);
    }
 
-   public void handleClose(Close close)
-   {
+   public void handleClose(Close close) {
       if (connection != null && connection.getRemoteState() == EndpointState.ACTIVE) {
          sendError("Connection previously open");
          return;
@@ -208,8 +203,7 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
       connectionClosed(close, connection);
    }
 
-   public void handleBegin(Begin begin)
-   {
+   public void handleBegin(Begin begin) {
       if (connection == null) {
          sendError("no connection opened");
          return;
@@ -217,8 +211,7 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
 
       Session session;
 
-      if(begin.getRemoteChannel() == null)
-      {
+      if (begin.getRemoteChannel() == null) {
          session = connection.newSession();
          if (sessions.get(currentChannel) != null) {
             sendError("Session previously set");
@@ -226,9 +219,7 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
          }
          session.setChannel(currentChannel);
          sessions.put(currentChannel, session);
-      }
-      else
-      {
+      } else {
          session = sessions.get(begin.getRemoteChannel().shortValue());
          if (session == null) {
             sendError("uncorrelated channel " + begin.getRemoteChannel());
@@ -245,35 +236,33 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
       sessionBegin(begin, session);
    }
 
-
    public void sendError(Symbol symbol, String message) {
 
       ErrorCondition condition = new ErrorCondition(symbol, message);
       Close close = new Close();
       close.setError(condition);
-      sendFrame((short)0, (byte)0, close);
+      sendFrame((short) 0, (byte) 0, close);
       nettyChannel.close();
    }
 
-
    public void handleAttach(Attach attach) {
 
-      /* Session session = sessions.get(currentChannel);
+      Session session = sessions.get(currentChannel);
 
       if (session == null) {
          sendError("Session does not exist");
          return;
       }
-         final UnsignedInteger handle = attach.getHandle();
-         if (handle.compareTo(session.getHandleMax()) > 0) {
-            // The handle-max value is the highest handle value that can be used on the session. A peer MUST
-            // NOT attempt to attach a link using a handle value outside the range that its partner can handle.
-            // A peer that receives a handle outside the supported range MUST close the connection with the
-            // framing-error error-code.
-            sendError(ConnectionError.FRAMING_ERROR, "handle-max exceeded");
-            return;
-         }
-         TransportLink transportLink = transportSession.getLinkFromRemoteHandle(handle);
+      final UnsignedInteger handle = attach.getHandle();
+      if (handle.compareTo(session.getHandleMax()) > 0) {
+         // The handle-max value is the highest handle value that can be used on the session. A peer MUST
+         // NOT attempt to attach a link using a handle value outside the range that its partner can handle.
+         // A peer that receives a handle outside the supported range MUST close the connection with the
+         // framing-error error-code.
+         sendError(ConnectionError.FRAMING_ERROR, "handle-max exceeded");
+         return;
+      }
+         /* TransportLink transportLink = transportSession.getLinkFromRemoteHandle(handle);
          LinkImpl link = null;
 
          if(transportLink != null)
@@ -321,9 +310,7 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
             transportLink.setRemoteHandle(handle);
             transportSession.addLinkRemoteHandle(transportLink, handle);
 
-         }
-
-         _connectionEndpoint.put(Event.Type.LINK_REMOTE_OPEN, link);*/
+         } */
 
    }
 
@@ -332,7 +319,6 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
       sessionEnded(end, currentChannel, session);
 
    }
-
 
    protected void connectionOpened(Open open, Connection connection) {
       this.remoteFrameSize = open.getMaxFrameSize().intValue();
@@ -351,20 +337,18 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
       sendEnd(session, channel, end);
    }
 
-
    public Connection createConnection() {
       return new Connection(this);
    }
 
    protected void sendBegin(Begin begin, Session session) {
-     sendFrame(session.getChannel(), (byte)0, begin);
+      sendFrame(session.getChannel(), (byte) 0, begin);
    }
 
    protected void sendEnd(Session session, short channel, End end) {
-      sendFrame(channel, (byte)0, end);
+      sendFrame(channel, (byte) 0, end);
    }
 
-   @Override
    public void sendOpen(Connection connection) {
       Open open = new Open();
       open.setMaxFrameSize(new UnsignedInteger(maxFrameSize));
@@ -373,13 +357,14 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
       open.setContainerId(connection.getRemoteContainer());
       open.setIdleTimeOut(connection.getRemoteIdleTimeout());
 
-      sendFrame((short)0, (byte)0, open);
+      sendFrame((short) 0, (byte) 0, open);
 
    }
 
    private void sendFrame(short channel, byte frameType, Performative performative) {
       sendFrame(channel, frameType, performative, 1024);
    }
+
    private void sendFrame(short channel, byte frameType, Performative performative, int expectedSize) {
       ByteBuf nettyBuffer = nettyChannel.alloc().buffer(expectedSize);
       ProtonBuffer wrappedBuffer = protonBuffer.get().setBuffer(nettyBuffer);
@@ -389,10 +374,9 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
       //debugOutput(nettyBuffer);
    }
 
-   @Override
    public void sendClose(Connection connection) {
       Close close = new Close();
-      sendFrame((short)0, (byte)0, close);
+      sendFrame((short) 0, (byte) 0, close);
    }
 
    private void debugInput(ByteBuf buffer) {
@@ -413,4 +397,13 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Proces
       }
    }
 
+   @Override
+   public int getMaxFrameSize() {
+      return maxFrameSize;
+   }
+
+   @Override
+   public int getRemoteMaxFrameSize() {
+      return remoteFrameSize;
+   }
 }
