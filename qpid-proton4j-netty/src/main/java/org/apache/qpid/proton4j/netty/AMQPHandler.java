@@ -35,6 +35,7 @@ import org.apache.qpid.proton4j.amqp.transport.End;
 import org.apache.qpid.proton4j.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton4j.amqp.transport.Open;
 import org.apache.qpid.proton4j.amqp.transport.Performative;
+import org.apache.qpid.proton4j.amqp.transport.Role;
 import org.apache.qpid.proton4j.buffer.ProtonBuffer;
 import org.apache.qpid.proton4j.codec.CodecFactory;
 import org.apache.qpid.proton4j.codec.DecoderState;
@@ -43,7 +44,10 @@ import org.apache.qpid.proton4j.engine.Transport;
 import org.apache.qpid.proton4j.engine.state.Connection;
 import org.apache.qpid.proton4j.engine.state.ConnectionError;
 import org.apache.qpid.proton4j.engine.state.EndpointState;
+import org.apache.qpid.proton4j.engine.state.LinkImpl;
 import org.apache.qpid.proton4j.engine.state.Session;
+import org.apache.qpid.proton4j.engine.state.TransportLink;
+import org.apache.qpid.proton4j.engine.state.TransportSession;
 import org.apache.qpid.proton4j.netty.buffer.NettyProtonBuffer;
 
 /**
@@ -171,14 +175,10 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Transp
       }
    }
 
-   public void sendError(String message) {
-      // TODO: What to do?
-      nettyChannel.close();
-   }
 
    public void handleOpen(Open open) {
       if (connection != null && connection.getRemoteState() == EndpointState.ACTIVE) {
-         sendError("Connection previously open");
+         sendError(ConnectionError.FRAMING_ERROR, "Connection previously open");
          return;
       }
       this.remoteFrameSize = open.getMaxFrameSize().intValue();
@@ -196,7 +196,7 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Transp
 
    public void handleClose(Close close) {
       if (connection != null && connection.getRemoteState() == EndpointState.ACTIVE) {
-         sendError("Connection previously open");
+         sendError(ConnectionError.FRAMING_ERROR, "Connection previously open");
          return;
       }
       connection.handleClose(close);
@@ -205,7 +205,7 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Transp
 
    public void handleBegin(Begin begin) {
       if (connection == null) {
-         sendError("no connection opened");
+         sendError(ConnectionError.FRAMING_ERROR, "no connection opened");
          return;
       }
 
@@ -214,7 +214,7 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Transp
       if (begin.getRemoteChannel() == null) {
          session = connection.newSession();
          if (sessions.get(currentChannel) != null) {
-            sendError("Session previously set");
+            sendError(ConnectionError.FRAMING_ERROR, "Session previously set");
             return;
          }
          session.setChannel(currentChannel);
@@ -222,7 +222,7 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Transp
       } else {
          session = sessions.get(begin.getRemoteChannel().shortValue());
          if (session == null) {
-            sendError("uncorrelated channel " + begin.getRemoteChannel());
+            sendError(ConnectionError.FRAMING_ERROR, "uncorrelated channel " + begin.getRemoteChannel());
          }
       }
       session.setChannel(currentChannel);
@@ -250,7 +250,7 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Transp
       Session session = sessions.get(currentChannel);
 
       if (session == null) {
-         sendError("Session does not exist");
+         sendError(ConnectionError.FRAMING_ERROR, "Session does not exist");
          return;
       }
       final UnsignedInteger handle = attach.getHandle();
@@ -262,55 +262,121 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Transp
          sendError(ConnectionError.FRAMING_ERROR, "handle-max exceeded");
          return;
       }
-         /* TransportLink transportLink = transportSession.getLinkFromRemoteHandle(handle);
-         LinkImpl link = null;
 
-         if(transportLink != null)
+      TransportSession transportSession = session.getTransportSession();
+
+      TransportLink<?> transportLink = transportSession.getLinkFromRemoteHandle(handle);
+      LinkImpl link = null;
+
+      if(transportLink != null)
+      {
+         sendError(ConnectionError.FRAMING_ERROR, "handle was previously use");
+         return;
+      }
+      else
+      {
+         transportLink = transportSession.resolveHalfOpenLink(attach.getName());
+         if(transportLink == null)
          {
-            TransportLink<?> transportLink = transportSession.getLinkFromRemoteHandle(handle);
-            LinkImpl link = null;
 
-            // TODO - fail - attempt attach on a handle which is in use
+            link = new LinkImpl(attach.getRole(), session, attach.getName());
+            transportLink = new TransportLink(link);
          }
          else
          {
-            transportLink = transportSession.resolveHalfOpenLink(attach.getName());
-            if(transportLink == null)
-            {
+            link = transportLink.getLink();
+         }
+         if(attach.getRole() == Role.SENDER)
+         {
+            transportLink.setDeliveryCount(attach.getInitialDeliveryCount());
+         }
 
-               link = (attach.getRole() == Role.RECEIVER)
-                  ? session.sender(attach.getName())
-                  : session.receiver(attach.getName());
-               transportLink = getTransportState(link);
-            }
-            else
-            {
-               link = transportLink.getLink();
-            }
-            if(attach.getRole() == Role.SENDER)
-            {
-               transportLink.setDeliveryCount(attach.getInitialDeliveryCount());
-            }
+         link.setRemoteState(EndpointState.ACTIVE);
+         link.setRemoteSource(attach.getSource());
+         link.setRemoteTarget(attach.getTarget());
 
-            link.setRemoteState(EndpointState.ACTIVE);
-            link.setRemoteSource(attach.getSource());
-            link.setRemoteTarget(attach.getTarget());
+         link.setRemoteReceiverSettleMode(attach.getRcvSettleMode());
+         link.setRemoteSenderSettleMode(attach.getSndSettleMode());
 
-            link.setRemoteReceiverSettleMode(attach.getRcvSettleMode());
-            link.setRemoteSenderSettleMode(attach.getSndSettleMode());
+         link.setRemoteProperties(attach.getProperties());
 
-            link.setRemoteProperties(attach.getProperties());
+         link.setRemoteDesiredCapabilities(attach.getDesiredCapabilities());
+         link.setRemoteOfferedCapabilities(attach.getOfferedCapabilities());
 
-            link.setRemoteDesiredCapabilities(attach.getDesiredCapabilities());
-            link.setRemoteOfferedCapabilities(attach.getOfferedCapabilities());
+         link.setRemoteMaxMessageSize(attach.getMaxMessageSize());
 
-            link.setRemoteMaxMessageSize(attach.getMaxMessageSize());
+         transportLink.setName(attach.getName());
+         transportLink.setRemoteHandle(handle);
+         transportSession.addLinkRemoteHandle(transportLink, handle);
+         transportSession.allocateLocalHandle(transportLink);
+         handleAttached(session, transportLink);
+      }
 
-            transportLink.setName(attach.getName());
-            transportLink.setRemoteHandle(handle);
-            transportSession.addLinkRemoteHandle(transportLink, handle);
+   }
 
-         } */
+   public void handleAttached(Session session, TransportLink link) {
+      link.getLink().setSource(link.getLink().getRemoteSource());
+      link.getLink().setTarget(link.getLink().getRemoteTarget());
+      sendAttach(session, link);
+   }
+
+   public void sendAttach(Session session, TransportLink transportLink) {
+
+      LinkImpl link = transportLink.getLink();
+
+      Attach attach = new Attach();
+      attach.setHandle(transportLink.getLocalHandle());
+      attach.setName(transportLink.getName());
+
+      if(link.getSenderSettleMode() != null)
+      {
+         attach.setSndSettleMode(link.getSenderSettleMode());
+      }
+
+      if(link.getReceiverSettleMode() != null)
+      {
+         attach.setRcvSettleMode(link.getReceiverSettleMode());
+      }
+
+      if(link.getSource() != null)
+      {
+         attach.setSource(link.getSource());
+      }
+
+      if(link.getTarget() != null)
+      {
+         attach.setTarget(link.getTarget());
+      }
+
+      if(link.getProperties() != null)
+      {
+         attach.setProperties(link.getProperties());
+      }
+
+      if(link.getOfferedCapabilities() != null)
+      {
+         attach.setOfferedCapabilities(link.getOfferedCapabilities());
+      }
+
+      if(link.getDesiredCapabilities() != null)
+      {
+         attach.setDesiredCapabilities(link.getDesiredCapabilities());
+      }
+
+      if(link.getMaxMessageSize() != null)
+      {
+         attach.setMaxMessageSize(link.getMaxMessageSize());
+      }
+
+      attach.setRole(link.getRole().equals(Role.SENDER) ? Role.RECEIVER : Role.SENDER);
+
+      if(link.getRole().equals(Role.SENDER))
+      {
+         attach.setInitialDeliveryCount(UnsignedInteger.ZERO);
+      }
+
+      sendFrame(session.getChannel(), (byte)0, attach);
+      transportLink.sentAttach();
 
    }
 

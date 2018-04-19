@@ -48,7 +48,8 @@ public abstract class Endpoint
         }
     }
 
-    abstract void postFinal();
+    void postFinal() {
+    }
 
     abstract void localOpen();
 
@@ -119,7 +120,9 @@ public abstract class Endpoint
     {
     }
 
-    abstract void doFree();
+    void doFree() {
+
+    }
 
     final public void free()
     {

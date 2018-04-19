@@ -54,12 +54,17 @@ public class Session extends Endpoint {
    private UnsignedInteger _handleMax;
    private HashSet<LinkImpl> links;
 
+   private final TransportSession transportSession;
+
 
 
    public Session(Connection connection, Transport transport)
    {
       _connection = connection;
       _connection.incref();
+
+      // TODO: one 2 one relationship with Session.. Doest it make sense to merge Session into a single class?
+      this.transportSession = new TransportSession(transport, this);
    }
 
    public short getChannel() {
@@ -90,6 +95,10 @@ public class Session extends Endpoint {
       } else {
          return links;
       }
+   }
+
+   public TransportSession getTransportSession() {
+      return transportSession;
    }
 
    //

@@ -39,7 +39,7 @@ public class DeliveryImpl
     private DeliveryImpl _transportWorkPrev;
     boolean _transportWork;
 
-    private Record _attachments;
+    //private Record _attachments;
     private Object _context;
 
     private final byte[] _tag;
