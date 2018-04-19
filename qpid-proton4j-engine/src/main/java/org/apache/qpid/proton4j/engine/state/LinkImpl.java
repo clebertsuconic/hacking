@@ -24,10 +24,13 @@ import java.util.EnumSet;
 import java.util.Map;
 
 import org.apache.qpid.proton4j.amqp.*;
+import org.apache.qpid.proton4j.amqp.messaging.Source;
+import org.apache.qpid.proton4j.amqp.messaging.Target;
 import org.apache.qpid.proton4j.amqp.transport.ReceiverSettleMode;
+import org.apache.qpid.proton4j.amqp.transport.Role;
 import org.apache.qpid.proton4j.amqp.transport.SenderSettleMode;
 
-public abstract class LinkImpl extends Endpoint {
+public class LinkImpl extends Endpoint {
 
 
     private final Session _session;
@@ -55,23 +58,28 @@ public abstract class LinkImpl extends Endpoint {
 
     private boolean _drain;
     private boolean _detached;
-    private Map<Symbol, Object> _properties;
-    private Map<Symbol, Object> _remoteProperties;
+    private Map<Object, Object> _properties;
+    private Map<Object, Object> _remoteProperties;
     private Symbol[] _offeredCapabilities;
     private Symbol[] _remoteOfferedCapabilities;
     private Symbol[] _desiredCapabilities;
     private Symbol[] _remoteDesiredCapabilities;
 
-    LinkImpl(Session session, String name)
+    private final Role role;
+
+    public LinkImpl(Role role, Session session, String name)
     {
+        this.role = role;
         _session = session;
         _session.incref();
         _name = name;
         Connection conn = session.getConnection();
     }
 
+    public Role getRole() {
+        return role;
+    }
 
-    
     public String getName()
     {
         return _name;
@@ -199,7 +207,7 @@ public abstract class LinkImpl extends Endpoint {
         return _remoteSource;
     }
 
-    void setRemoteSource(Source source)
+    public void setRemoteSource(Source source)
     {
         _remoteSource = source;
     }
@@ -210,7 +218,7 @@ public abstract class LinkImpl extends Endpoint {
         return _remoteTarget;
     }
 
-    void setRemoteTarget(Target target)
+    public void setRemoteTarget(Target target)
     {
         _remoteTarget = target;
     }
@@ -242,9 +250,6 @@ public abstract class LinkImpl extends Endpoint {
     }
 
 
-    abstract TransportLink getTransportLink();
-
-    
     public int getCredit()
     {
         return _credit;
@@ -360,30 +365,30 @@ public abstract class LinkImpl extends Endpoint {
         return _remoteReceiverSettleMode;
     }
 
-    void setRemoteReceiverSettleMode(ReceiverSettleMode remoteReceiverSettleMode)
+    public void setRemoteReceiverSettleMode(ReceiverSettleMode remoteReceiverSettleMode)
     {
         _remoteReceiverSettleMode = remoteReceiverSettleMode;
     }
 
     
-    public Map<Symbol, Object> getProperties()
+    public Map<Object, Object> getProperties()
     {
         return _properties;
     }
 
     
-    public void setProperties(Map<Symbol, Object> properties)
+    public void setProperties(Map<Object, Object> properties)
     {
         _properties = properties;
     }
 
     
-    public Map<Symbol, Object> getRemoteProperties()
+    public Map<Object, Object> getRemoteProperties()
     {
         return _remoteProperties;
     }
 
-    void setRemoteProperties(Map<Symbol, Object> remoteProperties)
+    public void setRemoteProperties(Map<Object, Object> remoteProperties)
     {
         _remoteProperties = remoteProperties;
     }
@@ -406,7 +411,7 @@ public abstract class LinkImpl extends Endpoint {
         return _remoteDesiredCapabilities;
     }
 
-    void setRemoteDesiredCapabilities(Symbol[] remoteDesiredCapabilities)
+    public void setRemoteDesiredCapabilities(Symbol[] remoteDesiredCapabilities)
     {
         _remoteDesiredCapabilities = remoteDesiredCapabilities;
     }
@@ -429,7 +434,7 @@ public abstract class LinkImpl extends Endpoint {
         return _remoteOfferedCapabilities;
     }
 
-    void setRemoteOfferedCapabilities(Symbol[] remoteOfferedCapabilities)
+    public void setRemoteOfferedCapabilities(Symbol[] remoteOfferedCapabilities)
     {
         _remoteOfferedCapabilities = remoteOfferedCapabilities;
     }
@@ -452,7 +457,7 @@ public abstract class LinkImpl extends Endpoint {
         return _remoteMaxMessageSize;
     }
 
-    void setRemoteMaxMessageSize(UnsignedLong remoteMaxMessageSize)
+    public void setRemoteMaxMessageSize(UnsignedLong remoteMaxMessageSize)
     {
         _remoteMaxMessageSize = remoteMaxMessageSize;
     }
@@ -494,13 +499,16 @@ public abstract class LinkImpl extends Endpoint {
         return _head;
     }
 
-    
-    /* void localOpen()
-    {
-        getConnectionImpl().put(Event.Type.LINK_LOCAL_OPEN, this);
+    @Override
+    public void localClose() {
     }
 
-    
+    @Override
+    public void localOpen()
+    {
+    }
+
+   /*
     void localClose()
     {
         getConnectionImpl().put(Event.Type.LINK_LOCAL_CLOSE, this);

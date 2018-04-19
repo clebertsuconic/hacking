@@ -37,7 +37,7 @@ public class TransportLink<T extends LinkImpl>
     private boolean _detachReceived;
     private boolean _attachSent;
 
-    protected TransportLink(T link)
+    public TransportLink(T link)
     {
         _link = link;
         _name = link.getName();
