@@ -308,8 +308,75 @@ public abstract class AMQPHandler extends ChannelDuplexHandler implements Transp
          transportLink.setName(attach.getName());
          transportLink.setRemoteHandle(handle);
          transportSession.addLinkRemoteHandle(transportLink, handle);
-
+         transportSession.allocateLocalHandle(transportLink);
+         handleAttached(session, transportLink);
       }
+
+   }
+
+   public void handleAttached(Session session, TransportLink link) {
+      link.getLink().setSource(link.getLink().getRemoteSource());
+      link.getLink().setTarget(link.getLink().getRemoteTarget());
+      sendAttach(session, link);
+   }
+
+   public void sendAttach(Session session, TransportLink transportLink) {
+
+      LinkImpl link = transportLink.getLink();
+
+      Attach attach = new Attach();
+      attach.setHandle(transportLink.getLocalHandle());
+      attach.setName(transportLink.getName());
+
+      if(link.getSenderSettleMode() != null)
+      {
+         attach.setSndSettleMode(link.getSenderSettleMode());
+      }
+
+      if(link.getReceiverSettleMode() != null)
+      {
+         attach.setRcvSettleMode(link.getReceiverSettleMode());
+      }
+
+      if(link.getSource() != null)
+      {
+         attach.setSource(link.getSource());
+      }
+
+      if(link.getTarget() != null)
+      {
+         attach.setTarget(link.getTarget());
+      }
+
+      if(link.getProperties() != null)
+      {
+         attach.setProperties(link.getProperties());
+      }
+
+      if(link.getOfferedCapabilities() != null)
+      {
+         attach.setOfferedCapabilities(link.getOfferedCapabilities());
+      }
+
+      if(link.getDesiredCapabilities() != null)
+      {
+         attach.setDesiredCapabilities(link.getDesiredCapabilities());
+      }
+
+      if(link.getMaxMessageSize() != null)
+      {
+         attach.setMaxMessageSize(link.getMaxMessageSize());
+      }
+
+      attach.setRole(link.getRole().equals(Role.SENDER) ? Role.RECEIVER : Role.SENDER);
+
+      if(link.getRole().equals(Role.SENDER))
+      {
+         attach.setInitialDeliveryCount(UnsignedInteger.ZERO);
+      }
+
+      sendFrame(session.getChannel(), (byte)0, attach);
+      transportLink.sentAttach();
 
    }
 

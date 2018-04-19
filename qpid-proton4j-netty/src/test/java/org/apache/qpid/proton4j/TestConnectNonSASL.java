@@ -46,12 +46,12 @@ public class TestConnectNonSASL {
 
    @Test
    public void testConnect() throws Exception {
-      JmsConnectionFactory factory = new JmsConnectionFactory("amqp://localhost:5672?amqp.saslLayer=false");
+      JmsConnectionFactory factory = new JmsConnectionFactory("amqp://localhost:5672?amqp.saslLayer=false&amqp.traceBytes=true&traceBytes=true");
 
       Connection connection = factory.createConnection();
       Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
       Queue queue = session.createQueue("test");
-       MessageProducer producer = session.createProducer(queue);
+      MessageProducer producer = session.createProducer(queue);
       session.close();
       connection.close();
 
