@@ -39,6 +39,12 @@ public abstract class AMQPHandshaker extends ByteToMessageDecoder {
 
    public static final byte[] handShakeSASL = new byte[]{'A', 'M', 'Q', 'P', 4, 1, 0, 0};
 
+   protected final int maxFrameSize;
+
+   public AMQPHandshaker(int maxFrameSize) {
+      this.maxFrameSize = maxFrameSize;
+   }
+
    @Override
    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
       if (ctx.isRemoved()) {
@@ -50,7 +56,7 @@ public abstract class AMQPHandshaker extends ByteToMessageDecoder {
 
       if (checkHeader(in, handShakeBare)) {
          // TODO: Setup proper max size on frame size
-         ctx.pipeline().addLast(new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, -4, 0));
+         ctx.pipeline().addLast(new LengthFieldBasedFrameDecoder(maxFrameSize,0, 4, -4, 0));
          ctx.pipeline().addLast(createHandler(ctx));
          ctx.pipeline().remove(this);
          ctx.writeAndFlush(Unpooled.wrappedBuffer(handShakeBare));

@@ -45,6 +45,6 @@ public class NettyServer extends NettyAbstractServer {
 
    @Override
    protected AMQPHandshaker createHandshaker() {
-      return new AMQPSampleHandshaker();
+      return new AMQPSampleHandshaker(Integer.MAX_VALUE);
    }
 }

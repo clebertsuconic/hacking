@@ -27,9 +27,13 @@ import org.apache.qpid.proton4j.netty.AMQPHandshaker;
 
 public class AMQPSampleHandshaker extends AMQPHandshaker {
 
+   public AMQPSampleHandshaker(int maxFrameSize) {
+      super(maxFrameSize);
+   }
+
    @Override
    protected AMQPHandler createHandler(ChannelHandlerContext ctx) {
-      return new AMQPSampleHandler(ctx.channel(), Integer.MAX_VALUE);
+      return new AMQPSampleHandler(ctx.channel(), maxFrameSize);
    }
 
 }
